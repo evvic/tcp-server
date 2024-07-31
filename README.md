@@ -9,10 +9,9 @@ Client and server based model
 - Client is any machine which initiates the request
 
 ```
-
-+-----+        ________
-|  C  |----> ( internet )-----> 
-+-----+       ```````````
++-----+        ________         +-----+
+|  C  |----> ( internet )-----> |  S  |
++-----+       ```````````       +-----+
 ```
 
 ## Socket Programming
