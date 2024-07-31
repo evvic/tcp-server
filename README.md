@@ -60,6 +60,16 @@ socket(int __domain, int __type, int __protocol)
     - `__protocol` = `IPPROTO_TCP`: `IPPROTO_TCP` is the protocol desired to run on top of the network layer
         - For creating a UDP stream this arg would've been `IPPROTO_UDP`
 
+### `bind` System Call
+- The server program (running in Applciation Layer) tells the OS to send packets it receives if it matches the server's IP address and port
+```c
+bind(int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
+```
+- bind takes 3 arguments
+    - `__fd` takes the "master" FD
+    - `__addr` takes a pointer to the `sockaddr` struct of server info
+    - `__len` takes the length of the `sockaddr` apssed in the 2nd arg
+
 ### `accept` System Call
 - The purpose of accept is to establish the connection between 2 machines (client and server)
 - Carry out TCP 3-way handshake
