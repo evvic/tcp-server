@@ -70,7 +70,14 @@ int comm_sock_fd = accept(master_sock_tcp_fd, (struct sockaddr*)&client_addr, &a
 - `addr_len`: size of predefined struct `sockaddr` (const)
 
 ### `select` System Call
-- Linux provides a built-in data structure 
+- Implementing a server with multiplexing capabilities requires use of `select`
+- Linux provides a built-in data structure to maintain the set of socket file descriptors
+    - `fd_set` data structure is a set of file descriptors
+- `select()` system call monitors all socket FDs present in `fd_set`
+- it blocks code execution until either of the 2 options happens:
+    1. New connection request from a client arrives
+    2. Data request from existing connected client arrives
+
 
 #### Example
 - A client (C1) makes a new connection request to the server
