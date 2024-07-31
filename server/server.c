@@ -1,3 +1,9 @@
+/*********************************************************************
+** A simple TCP server which can only hold one connection at a time
+** The server takes 2 (unsigned) integers and adds them together
+** The result is then retuned to the client
+**********************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -11,6 +17,18 @@
 /* Define the port which the client has to send data to */
 #define SERVER_PORT 3000
 #define CONNECTIONS_QUEUE 5
+
+typedef struct test_data        // struct to hold the 2 values sent by the client
+{       
+    unsigned int a;
+    unsigned int b;
+} test_data;
+
+
+typedef struct result_data      // struct to store the result of adding a + b from test_data
+{
+    unsigned int c;             // c = a + b
+} result_data;
 
 char DATA_BUFFER[1024];
 
@@ -137,16 +155,40 @@ void init_tcp_server()
                     break;
                 }
 
-                // test_struct_t *client_data = (test_struct_t *)DATA_BUFFER;
-                
+                test_data *client_data = (test_data *)DATA_BUFFER;
 
+                if (client_data->a == 0 &&
+                    client_data->b == 0)
+                {
+                    close(comm_socket_fd);
+                    printf("Server closed connection with client %s:%u\n",
+                        inet_ntoa(client_addr.sin_addr),
+                        ntohs(client_addr.sin_port));
+
+                    break;
+                }
+
+                result_data result;
+
+                /* Server is calcualting the sum of values a + b */
+                result.c = client_data->a + client_data->b;
+
+                /* Server replying back to client */
+
+                sent_recv_bytes = sendto(       // server is sending the result back to the client
+                    comm_socket_fd,             // invoked on the comm_socket_fd to reply to cleint
+                    (char*)&result,
+                    sizeof(result_data),
+                    0,
+                    (struct sockaddr*)&client_addr,
+                    sizeof(struct sockaddr)
+                );
+
+                printf("Server send %d bytes in reply to cleint\n",
+                    sent_recv_bytes
+                );
             }
-
-            
-
-
         }
-
     }
 
     close(master_socket_fd);
