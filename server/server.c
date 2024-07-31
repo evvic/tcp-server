@@ -24,10 +24,9 @@ void init_tcp_server()
 
     fd_set readfds;             // set of FDs which select() polls
 
-    struct sockaddr {           // struct to store server and client info
+    struct sockaddr             // struct to store server and client info
         server_addr,            
         client_addr;
-    };
 
     /* TCP master socket creation */
 

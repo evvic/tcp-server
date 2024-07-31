@@ -48,6 +48,18 @@ Client and server based model
     - The master socket is only used for new connection requests
     - M is not used for data exchange with already connected clients
 
+### `socket` System Call
+- Creates a socket and returns the file descriptor integer for the one created
+```c
+socket(int __domain, int __type, int __protocol)
+```
+- socket takes 3 arguments
+    - `__domain` = `AF_INET`: `AF_NET` specifies the address family and INET is for IPv4 address
+    - `__type` = `SOCK_STREAM`: `SOCK_STREAM` used for creating TCP connections
+        - For creating a UDP stream this arg would've been `SOCK_DGRAM`
+    - `__protocol` = `IPPROTO_TCP`: `IPPROTO_TCP` is the protocol desired to run on top of the network layer
+        - For creating a UDP stream this arg would've been `IPPROTO_UDP`
+
 ### `accept` System Call
 - The purpose of accept is to establish the connection between 2 machines (client and server)
 - Carry out TCP 3-way handshake
