@@ -68,9 +68,85 @@ void init_tcp_server()
         return;
     }
 
+    /* Server loop for servicing clients */
+
     while(1)
     {
-        
+        FD_ZERO(&readfds);                      // initialize the FD set to empty
+        FD_SET(master_socket_fd, &readfds);     // adding only the master FD to the set
+
+        /* Wait for client connection */
+
+        select(                                 // process waits for any request from a FD in the readfds set
+            master_socket_fd + 1,               // provide the number for creating the next FD
+            &readfds,                           // provide the set of FDs (only contains master_socket_fd)
+            NULL, NULL, NULL
+        );
+
+        if (FD_ISSET(                           // check which FD in readfds set is activated
+                master_socket_fd,               // provide the master FD to check if that one is active
+                &readfds))                      // within the FD set
+        {                                       // in this example master FD will always be selected (TRUE)
+            printf("New connection received! Accepting the connection..\n");
+
+            /* Create a temp file descriptor for the rest of the connections life */
+
+            comm_socket_fd = accept(            // accept the connection and reurn the FD
+                master_socket_fd,               // master FD only used for accepting the new clients connection
+                (struct sockaddr*)&client_addr, // pass empty client_addr to be populated with IP address & port
+                &addr_len                       // const size of sockaddr
+            );
+
+            if (comm_socket_fd < 0)             // check accept didn't fail creating a FD
+            {
+                printf("accept error: errno=%d\n", errno);
+                exit(0);
+            }
+
+            printf("Conenction accepted from client: %s:%u\n",
+                inet_ntoa(client_addr.sin_addr), // print IP address into "x.x.x.x" format
+                ntohs(client_addr.sin_port));   //
+
+            while(1)
+            {
+                printf("Server ready to service client msgs.\n");
+                memset(                         // prepare memory space for server to store data
+                    DATA_BUFFER,                // received from the client of size DATA_BUFFER
+                    0,
+                    sizeof(DATA_BUFFER));
+
+                /* Server receiving data from the client */
+
+                sent_recv_bytes = recvfrom(     // a blocking system call until data arrives at comm_socket_fd
+                    comm_socket_fd,             // all communciation happens on the communication FD (not master FD)
+                    (char*)DATA_BUFFER,         // the location which the data is going to be stored
+                    sizeof(DATA_BUFFER),        // how many bytes long is this data buffer
+                    0,
+                    (struct sockaddr*)&client_addr,
+                    &addr_len
+                );
+
+                printf("Server received %d bytes from client %s:%u\n",
+                    sent_recv_bytes,
+                    inet_ntoa(client_addr.sin_addr),
+                    ntohs(client_addr.sin_port));
+
+                if (sent_recv_bytes == 0)       // if server received 0 bytes from client
+                {                               // server may close the connection and wait for
+                    close(comm_socket_fd);      // a new conenction
+                    break;
+                }
+
+                // test_struct_t *client_data = (test_struct_t *)DATA_BUFFER;
+                
+
+            }
+
+            
+
+
+        }
+
     }
 
     close(master_socket_fd);
