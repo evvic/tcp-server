@@ -10,6 +10,7 @@
 
 /* Define the port which the client has to send data to */
 #define SERVER_PORT 3000
+#define CONNECTIONS_QUEUE 5
 
 char DATA_BUFFER[1024];
 
@@ -31,10 +32,10 @@ void init_tcp_server()
 
     /* TCP master socket creation */
 
-    if ((master_socket_fd = socket(             // ...
-            AF_INET,                            //...
-            SOCK_STREAM, 
-            IPPROTO_TCP)
+    if ((master_socket_fd = socket(             // create a master socket for the server (get the FD)
+            AF_INET,                            // specifies the address family -> IPv4 addressing
+            SOCK_STREAM,                        // specify socket is for TCP connections
+            IPPROTO_TCP)                        // specify TCP is the protocol to run in this socket
         ) == -1)
     {
         printf("Socket creation failed\n");
@@ -56,6 +57,20 @@ void init_tcp_server()
     {
         printf("Socket bind failed\n");
         return;
+    }
+
+    if (listen(                                 // tell the OS to maintain a queue of length CONNECTIONS_QUEUE
+            master_socket_fd,                   // receiving conenctions on master socket
+            CONNECTIONS_QUEUE)                  // the queue will hold no more than (5) CONNECTIONS_QUEUE
+        < 0) 
+    {
+        printf("Listen failed\n");
+        return;
+    }
+
+    while(1)
+    {
+        
     }
 
     close(master_socket_fd);
