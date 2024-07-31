@@ -70,6 +70,16 @@ bind(int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
     - `__addr` takes a pointer to the `sockaddr` struct of server info
     - `__len` takes the length of the `sockaddr` apssed in the 2nd arg
 
+### `listen` System Call
+- Used to limit the number of allowed incoming connections to be queued
+- Do not want the system to get overwhelmed with simultaneous requests from a large number of requirements
+```c
+listen(int __fd, int __n)
+```
+- Takes 2 arguments:
+    - `__fd` takes the "master" FD
+    - `__n` is the length of the queue
+
 ### `accept` System Call
 - The purpose of accept is to establish the connection between 2 machines (client and server)
 - Carry out TCP 3-way handshake
