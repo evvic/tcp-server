@@ -1,3 +1,9 @@
+/*********************************************************************
+** A simple TCP client which can connects to the right TCP server.
+** The client inputs and sends 2 (unsigned) integers to the server.
+** The server adds the numbers together and returns the result.
+**********************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -73,7 +79,7 @@ void setup_tcp_connection()
         ) == NULL)
     {                                   // NULL means it failed to convert address to string
         perror("inet_ntop");
-        printf("Error converting network address uint to a strin\n");
+        printf("Error converting network address uint to a string\n");
         strcpy(ip_str, "null");
     }
 
