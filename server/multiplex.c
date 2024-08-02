@@ -82,6 +82,20 @@ void re_init_fds(fd_set *fdset)
     }
 }
 
+int get_max_fd()
+{
+    int max = -1;
+    for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
+    {
+        if (monitored_fd_set[i] != -1)
+        {
+            max = (monitored_fd_set[i] > max) ? monitored_fd_set[i] : max;
+        }
+    }
+    printf("Max FD: %d\n", max);
+    return max;
+}
+
 void init_tcp_server()
 {
     /* Initialize objects */
@@ -152,7 +166,7 @@ void init_tcp_server()
         /* Wait for client connection */
 
         select(                                 // process waits for any request from a FD in the readfds set
-            master_socket_fd + 1,               // provide the number for creating the next FD
+            get_max_fd() + 1,                   // provide the number for creating the next FD
             &readfds,                           // provide the set of FDs
             NULL, NULL, NULL
         );
@@ -191,7 +205,7 @@ void init_tcp_server()
 
             add_to_monitored_fd_set(comm_socket_fd);
             printf("Connection accepted from client: %s:%u\n",
-                ip_str,                         // print IP address with "x.x.x.x" format
+                inet_ntoa(client_addr.sin_addr),                         // print IP address with "x.x.x.x" format
                 ntohs(client_addr.sin_port));   // convert port into readable integer
         }
         else                                    // data arrived on a client communication socket FD
@@ -266,7 +280,6 @@ void init_tcp_server()
                     printf("Server send %d bytes in reply to client\n",
                         sent_recv_bytes
                     );
-
 
                 }
             }
