@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "functional": "c",
-        "netdb.h": "c"
+        "netdb.h": "c",
+        "inet.h": "c"
     }
 }
