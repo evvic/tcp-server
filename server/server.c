@@ -15,7 +15,7 @@
 #include <errno.h>
 
 /* Define the port which the client has to send data to */
-#define SERVER_PORT 3000
+#define SERVER_PORT 3001
 #define CONNECTIONS_QUEUE 5
 
 typedef struct test_data        // struct to hold the 2 values sent by the client
