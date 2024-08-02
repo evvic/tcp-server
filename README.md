@@ -46,9 +46,14 @@ Client and server based model
 - Once the client handles are created for each client, the Server carries out communication with the client using the client handle
     - The master socket is only used for new connection requests
     - M is not used for data exchange with already connected clients
+- The server can service one client at a time (single thread)
+    - but can maintain multiple connections
+    - To handle more clients, more server machines need to be deployed
 
 ### `socket` System Call
 - Creates a socket and returns the file descriptor integer for the one created
+- Used to a create a TCP/UDP master socket
+- Used on the server and client side
 ```c
 socket(int __domain, int __type, int __protocol)
 ```
@@ -61,6 +66,8 @@ socket(int __domain, int __type, int __protocol)
 
 ### `bind` System Call
 - The server program (running in Applciation Layer) tells the OS to send packets it receives if it matches the server's IP address and port
+- Used on the TCP/UDP server side
+- Used by the server application process to inform the OS the criteria of packets of interest
 ```c
 bind(int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 ```
@@ -72,6 +79,8 @@ bind(int __fd, __CONST_SOCKADDR_ARG __addr, socklen_t __len)
 ### `listen` System Call
 - Used to limit the number of allowed incoming connections to be queued
 - Do not want the system to get overwhelmed with simultaneous requests from a large number of requirements
+- Used on the TCP/UDP server side
+- Informs the OS the length of queue of incoming connection/data request from clients
 ```c
 listen(int __fd, int __n)
 ```
@@ -82,6 +91,8 @@ listen(int __fd, int __n)
 ### `accept` System Call
 - The purpose of accept is to establish the connection between 2 machines (client and server)
 - Carry out TCP 3-way handshake
+- Used on TCP server side
+- UDP connections do not use accept
 - `accept` returns the handle to the connection with the client
     - The handle is just an integer value, representing a dedicated connection
 - The handle is called a **communication file descriptor**
@@ -108,6 +119,18 @@ int comm_sock_fd = accept(master_sock_tcp_fd, (struct sockaddr*)&client_addr, &a
 - it blocks code execution until either of the 2 options happens:
     1. New connection request from a client arrives
     2. Data request from existing connected client arrives
+
+### `recvfrom` System Call
+- Used on TCP/UDP server and client side
+- Used by the server/client to read the data arrived on communication FDs
+
+### `sendto` System Call
+- Used on TCP/UDP server and client side
+- Sends data to the client/server
+
+### `close` System Call
+- Closes the connection
+- Used on TCP server and client side
 
 
 #### Example
