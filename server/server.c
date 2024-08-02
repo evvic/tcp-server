@@ -1,7 +1,7 @@
 /*********************************************************************
-** A simple TCP server which can only hold one connection at a time
-** The server takes 2 (unsigned) integers and adds them together
-** The result is then retuned to the client
+** A simple TCP server which can only hold one connection at a time.
+** The server takes 2 (unsigned) integers and adds them together.
+** The result is then retuned to the client.
 **********************************************************************/
 
 #include <stdio.h>
@@ -44,7 +44,7 @@ void init_tcp_server()
 
     fd_set readfds;             // set of FDs which select() polls
 
-    struct sockaddr             // struct to store server and client info
+    struct sockaddr_in          // struct to store server and client info
         server_addr,            
         client_addr;
 
@@ -63,7 +63,7 @@ void init_tcp_server()
     /* Specify server information */
     server_addr.sin_family = AF_INET;           // this socket will only process IPv4 network packets
     server_addr.sin_port = SERVER_PORT;         // this server will process any data arriving on SERVER_PORT
-    server_addr.sin_addr.s_addre = INADDR_ANY;  // set the server IP address to any/all interfaces on the server (INADDR_ANY)
+    server_addr.sin_addr.s_addr = INADDR_ANY;  // set the server IP address to any/all interfaces on the server (INADDR_ANY)
 
     addr_len = sizeof(struct sockaddr);
 
