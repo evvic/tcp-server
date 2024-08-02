@@ -9,10 +9,10 @@
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <memory.h>
 #include <errno.h>
-// #include "common.h"
 
 /* Define the port which the client has to send data to */
 #define SERVER_PORT 3000
@@ -30,7 +30,8 @@ typedef struct result_data      // struct to store the result of adding a + b fr
     unsigned int c;             // c = a + b
 } result_data;
 
-char DATA_BUFFER[1024];
+char DATA_BUFFER[1024];         // data buffer for data from client
+char ip_str[INET_ADDRSTRLEN];   // client IP address buffer (formatted string)
 
 void init_tcp_server()
 {
@@ -109,7 +110,7 @@ void init_tcp_server()
 
             /* Create a temp file descriptor for the rest of the connections life */
 
-            comm_socket_fd = accept(            // accept the connection and reurn the FD
+            comm_socket_fd = accept(            // accept the connection and return the FD
                 master_socket_fd,               // master FD only used for accepting the new clients connection
                 (struct sockaddr*)&client_addr, // pass empty client_addr to be populated with IP address & port
                 &addr_len                       // const size of sockaddr
@@ -121,9 +122,21 @@ void init_tcp_server()
                 exit(0);
             }
 
-            printf("Conenction accepted from client: %s:%u\n",
-                inet_ntoa(client_addr.sin_addr), // print IP address into "x.x.x.x" format
-                ntohs(client_addr.sin_port));   //
+            if (inet_ntop(                      // Convert uint32_t IP address into readable string, return NULL on error
+                    AF_INET,                    // specify IPv4 address
+                    &(client_addr.sin_addr),    // provide the clients uint32_t IP address
+                    ip_str,                     // the ip buffer to be assigned the IP string
+                    sizeof(ip_str)              // size of the buffer
+                ) == NULL)
+            {                        // NULL means it failed to convert address to string
+                perror("inet_ntop");
+                printf("Error converting network address uint to a strin\n");
+                strcpy(ip_str, "null");
+            }
+
+            printf("Connection accepted from client: %s:%u\n",
+                ip_str,                         // print IP address with "x.x.x.x" format
+                ntohs(client_addr.sin_port));   // convert port into readable integer
 
             while(1)
             {
@@ -141,12 +154,12 @@ void init_tcp_server()
                     sizeof(DATA_BUFFER),        // how many bytes long is this data buffer
                     0,
                     (struct sockaddr*)&client_addr,
-                    &addr_len
+                    sizeof(struct sockaddr)
                 );
 
                 printf("Server received %d bytes from client %s:%u\n",
                     sent_recv_bytes,
-                    inet_ntoa(client_addr.sin_addr),
+                    ip_str, // uint32_t or unsigned int
                     ntohs(client_addr.sin_port));
 
                 if (sent_recv_bytes == 0)       // if server received 0 bytes from client
@@ -162,7 +175,7 @@ void init_tcp_server()
                 {
                     close(comm_socket_fd);
                     printf("Server closed connection with client %s:%u\n",
-                        inet_ntoa(client_addr.sin_addr),
+                        ip_str,
                         ntohs(client_addr.sin_port));
 
                     break;
@@ -184,7 +197,7 @@ void init_tcp_server()
                     sizeof(struct sockaddr)
                 );
 
-                printf("Server send %d bytes in reply to cleint\n",
+                printf("Server send %d bytes in reply to client\n",
                     sent_recv_bytes
                 );
             }
