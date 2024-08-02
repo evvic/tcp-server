@@ -17,6 +17,7 @@
 /* Define the port which the client has to send data to */
 #define SERVER_PORT 3001
 #define CONNECTIONS_QUEUE 5
+#define MAX_SUPPORTED_CLIENTS 32
 
 typedef struct test_data        // struct to hold the 2 values sent by the client
 {       
@@ -33,11 +34,52 @@ typedef struct result_data      // struct to store the result of adding a + b fr
 char DATA_BUFFER[1024];         // data buffer for data from client
 char ip_str[INET_ADDRSTRLEN];   // client IP address buffer (formatted string)
 
-// ///// set init [32]
+int monitored_fd_set[MAX_SUPPORTED_CLIENTS];
 
 void init_monitor_fd_set()
 {
+    for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
+    {
+        monitored_fd_set[i] = -1;
+    }
+}
 
+void add_to_monitored_fd_set(int fd)
+{
+    for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
+    {
+        if (monitored_fd_set[i] != -1)
+        {
+            continue;
+        }
+        monitored_fd_set[i] = fd;
+        break;
+    }
+}
+
+void remove_from_monitored_fd_set(int fd)
+{
+    for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
+    {
+        if (monitored_fd_set[i] != fd)
+        {
+            continue;
+        }
+        monitored_fd_set[i] = -1;
+        break;
+    }
+}
+
+void re_init_fds(fd_set *fdset)
+{
+    FD_ZERO(fdset);
+    for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
+    {
+        if (monitored_fd_set[i] != -1)
+        {
+            FD_SET(monitored_fd_set[i], fdset);
+        }
+    }
 }
 
 void init_tcp_server()
@@ -96,12 +138,16 @@ void init_tcp_server()
         return;
     }
 
+    add_to_monitored_fd_set(master_socket_fd);  // Add master socket DF to set being monitored
+
     /* Server loop for servicing clients */
 
     while(1)
     {
-        FD_ZERO(&readfds);                      // initialize the FD set to empty
-        FD_SET(master_socket_fd, &readfds);     // adding only the master FD to the set
+
+        re_init_fds(&readfds);                     // does the same thing as the 2 below lines but for all FDs
+        // FD_ZERO(&readfds);                      // initialize the FD set to empty
+        // FD_SET(master_socket_fd, &readfds);     // adding only the master FD to the set
 
         /* Wait for client connection */
 
@@ -114,7 +160,7 @@ void init_tcp_server()
         if (FD_ISSET(                           // check which FD in readfds set is activated
                 master_socket_fd,               // provide the master FD to check if that one is active
                 &readfds))                      // within the FD set
-        {                                       // in this example master FD will always be selected (TRUE)
+        {                                       // master socket FD being active means a new connection request
             printf("New connection received! Accepting the connection..\n");
 
             /* Create a temp file descriptor for the rest of the connections life */
@@ -143,9 +189,13 @@ void init_tcp_server()
                 strcpy(ip_str, "null");
             }
 
+            add_to_monitored_fd_set(comm_socket_fd);
             printf("Connection accepted from client: %s:%u\n",
                 ip_str,                         // print IP address with "x.x.x.x" format
                 ntohs(client_addr.sin_port));   // convert port into readable integer
+        }
+        else                                    // data arrived on a client communication socket FD
+        {
 
             while(1)
             {
