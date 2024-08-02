@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <memory.h>
 
@@ -20,6 +21,8 @@ typedef struct result_data      // struct to store the result of adding a + b fr
     unsigned int c;             // c = a + b
 } result_data;
 
+char ip_str[INET_ADDRSTRLEN];   // server IP address buffer (formatted string)
+
 void setup_tcp_connection()
 {
 
@@ -31,31 +34,30 @@ void setup_tcp_connection()
 
     addr_len = sizeof(struct sockaddr);
 
-    struct sockaddr_in dest;                                            // to store socket addresses
+    struct sockaddr_in dest;            // to store server socket address
 
-    dest.sin_family = AF_INET;                                          // specify server is using IPv4 addressing
+    dest.sin_family = AF_INET;          // specify server is using IPv4 addressing
+    dest.sin_port = DEST_PORT;          // specify port number of the server
 
-    dest.sin_port = DEST_PORT;                                          // specify port number of the server
-
-    struct hostent *host = (
+    struct hostent *host = (            // convert IP address string to uint32_t
         struct hostent*)gethostbyname(
             SERVER_IP
-    );   // convert IP address string to int
+    );   
 
-    dest.sin_addr = *(
-        (struct in_addr*)host->h_addr_list[0]);           // specify (int) IP address of server
+    dest.sin_addr = *(                  // specify (int) IP address of server
+        (struct in_addr*)host->h_addr_list[0]);
 
 
-    sockfd = socket(        // create a communication socket to connect to server
-        AF_INET,            // IPv4 address family
-        SOCK_STREAM,        // creating a TCP socket
-        IPPROTO_TCP         // transport layer protocol is TCP
+    sockfd = socket(                    // create a communication socket to connect to server
+        AF_INET,                        // IPv4 address family
+        SOCK_STREAM,                    // creating a TCP socket
+        IPPROTO_TCP                     // transport layer protocol is TCP
     );                 
 
     /* Connect with the server */
     if (connect(                        // open a connection on socket FD to (sockaddr) dest server
-        sockfd,                     // socket file descriptor
-        (struct sockaddr*)&dest,    // server address and port
+        sockfd,                         // socket file descriptor
+        (struct sockaddr*)&dest,        // server address and port
         sizeof(struct sockaddr)
     ) == -1)
     {
@@ -63,7 +65,20 @@ void setup_tcp_connection()
         return;
     }
 
+    if (inet_ntop(                      // Convert uint32_t IP address into readable string, return NULL on error
+            AF_INET,                    // specify IPv4 address
+            &(dest.sin_addr),           // provide the servers uint32_t IP address
+            ip_str,                     // the ip buffer to be assigned the IP string
+            sizeof(ip_str)              // size of the buffer
+        ) == NULL)
+    {                                   // NULL means it failed to convert address to string
+        perror("inet_ntop");
+        printf("Error converting network address uint to a strin\n");
+        strcpy(ip_str, "null");
+    }
+
     /* OS dynamically assigns a port number to the client when sending a connection request */
+
     do {
         printf("Enter a: ");
         scanf("%u", &client_data.a);
@@ -79,7 +94,10 @@ void setup_tcp_connection()
             sizeof(struct sockaddr)     // size of sockaddr
         );
 
-        printf("%d bytes sent to the server.\n", sent_recv_bytes);
+        printf("%d bytes sent to the server (%s:%u).\n",
+            sent_recv_bytes,
+            ip_str,                     // print IP address with "x.x.x.x" format
+            ntohs(dest.sin_port));      // convert port into readable integer
 
         sent_recv_bytes = recvfrom(     // a blocking system call untilreceived data on the specified socket FD
             sockfd,                     // comm FD socket
@@ -90,7 +108,10 @@ void setup_tcp_connection()
             sizeof(struct sockaddr)     // size of sockaddr
         );
 
-        printf("%d bytes received from the server.\n", sent_recv_bytes);
+        printf("%d bytes received from the server (%s:%u).\n",
+            sent_recv_bytes,
+            ip_str,                     // print IP address with "x.x.x.x" format
+            ntohs(dest.sin_port));      // convert port into readable integer
 
         printf("%u + %u = %u\n", client_data.a, client_data.b, result.c);
 
