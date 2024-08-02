@@ -5,7 +5,7 @@
 #include <netdb.h>
 #include <memory.h>
 
-#define DEST_PORT 3000
+#define DEST_PORT 3001
 #define SERVER_IP "127.0.0.1"
 
 typedef struct test_data        // struct to hold the 2 values sent by the client
@@ -53,54 +53,58 @@ void setup_tcp_connection()
     );                 
 
     /* Connect with the server */
-    connect(                        // open a connection on socket FD to (sockaddr) dest server
+    if (connect(                        // open a connection on socket FD to (sockaddr) dest server
         sockfd,                     // socket file descriptor
         (struct sockaddr*)&dest,    // server address and port
         sizeof(struct sockaddr)
-    );
+    ) == -1)
+    {
+        printf("Failed to connect to server\n");
+        return;
+    }
 
-prompt_user:
-    printf("Enter a: ");
-    scanf("%u", &client_data.a);
-    printf("\nEnter b: ");
-    scanf("%u", &client_data.b);
-    printf('\n');
+    /* OS dynamically assigns a port number to the client when sending a connection request */
+    do {
+        printf("Enter a: ");
+        scanf("%u", &client_data.a);
+        printf("Enter b: ");
+        scanf("%u", &client_data.b);
 
+        sent_recv_bytes = sendto(       // send data to the server, returns number of bytes sent to the server
+            sockfd,                     // comm FD socket
+            &client_data,               // structure which carries the data to be sent (uint a and b)
+            sizeof(test_data),          // size of the data being sent to the server
+            0,                          //
+            (struct sockaddr*)&dest,    // server identity
+            sizeof(struct sockaddr)     // size of sockaddr
+        );
 
-    sent_recv_bytes = sendto(       // send data to the server, returns number of bytes sent to the server
-        sockfd,                     // comm FD socket
-        &client_data,               // structure which carries the data to be sent (uint a and b)
-        sizeof(test_data),          // size of the data being sent to the server
-        0,                          //
-        (struct sockaddr*)&dest,    // server identity
-        sizeof(struct sockaddr)     // size of sockaddr
-    );
+        printf("%d bytes sent to the server.\n", sent_recv_bytes);
 
-    printf("%d bytes sent to the server.\n", sent_recv_bytes);
+        sent_recv_bytes = recvfrom(     // a blocking system call untilreceived data on the specified socket FD
+            sockfd,                     // comm FD socket
+            (char *)&result,            // structure to store the received data
+            sizeof(result_data),        // size of the data structure to hold data being received
+            0,                          //
+            (struct sockaddr*)&dest,    // server identity
+            sizeof(struct sockaddr)     // size of sockaddr
+        );
 
-    sent_recv_bytes = recvfrom(     // a blocking system call untilreceived data on the specified socket FD
-        sockfd,                     // comm FD socket
-        (char *)&result,            // structure to store the received data
-        sizeof(result_data),        // size of the data structure to hold data being received
-        0,                          //
-        (struct sockaddr*)&dest,    // server identity
-        sizeof(struct sockaddr)     // size of sockaddr
-    );
+        printf("%d bytes received from the server.\n", sent_recv_bytes);
 
-    printf("%d bytes received from the server.\n", sent_recv_bytes);
+        printf("%u + %u = %u\n", client_data.a, client_data.b, result.c);
 
-    printf("%u + %u = %u", client_data.a, client_data.b, result.c);
-
-    // OS dynamically assigns a port number to the client when sending a connection request
-
-    goto prompt_user;
-
+    } while(client_data.a != 0 && client_data.b != 0);
 }
 
 
 int main(int argc, char** argv)
 {
+    printf("TCP Addition!\n");
+    printf("\t*Assign 'a' and 'b' both to 0 to end the session\n");
+    
     setup_tcp_connection();
-    printf("Ending application");
+
+    printf("Ending application\n");
     return 0;
 }
