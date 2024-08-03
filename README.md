@@ -123,6 +123,25 @@ int comm_sock_fd = accept(master_sock_tcp_fd, (struct sockaddr*)&client_addr, &a
 ### `recvfrom` System Call
 - Used on UDP server and client side
 - Used by the server/client to read the data arrived on communication FDs
+#### Example
+```c
+sent_recv_bytes = recvfrom(
+    sockfd,
+    (char *)&result,
+    sizeof(result_data),
+    0,
+    (struct sockaddr*)&source,
+    sizeof(struct sockaddr)
+);
+```
+- `int sockfd`: the file descriptor to receive data from
+- `result_data result`: the data structure (buffer) to have the received data read to
+- `sizeof(result_data)`: The available space in the buffer
+- `0`: providing no flags
+- `struct sockaddr_in source`: the structure to be populate with the senders IP and port
+- `(struct sockaddr*)&source`: the size of the sockaddr structure to store senders address info
+
+#### Use `recvfrom` for connectionless protocols
 - **For TCP use `recv` instead!**
     - Does the same thing as recvfrom except it does not populate the senders address info
     - For conenciton-oriented protocols like TCP the senders address info is not sent with the data packets!
