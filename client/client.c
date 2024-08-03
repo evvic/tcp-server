@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <memory.h>
 
-#define DEST_PORT 3001
+#define DEST_PORT 3000
 #define SERVER_IP "127.0.0.1"
 
 typedef struct test_data        // struct to hold the 2 values sent by the client
@@ -105,13 +105,11 @@ void setup_tcp_connection()
             ip_str,                     // print IP address with "x.x.x.x" format
             ntohs(dest.sin_port));      // convert port into readable integer
 
-        sent_recv_bytes = recvfrom(     // a blocking system call untilreceived data on the specified socket FD
+        sent_recv_bytes = recv(         // a blocking system call untilreceived data on the specified socket FD
             sockfd,                     // comm FD socket
             (char *)&result,            // structure to store the received data
             sizeof(result_data),        // size of the data structure to hold data being received
-            0,                          //
-            (struct sockaddr*)&dest,    // server identity
-            sizeof(struct sockaddr)     // size of sockaddr
+            0
         );
 
         printf("%d bytes received from the server (%s:%u).\n",
