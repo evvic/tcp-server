@@ -3,6 +3,8 @@
         "functional": "c",
         "netdb.h": "c",
         "inet.h": "c",
-        "select.h": "c"
+        "select.h": "c",
+        "memory.h": "c",
+        "ifaddrs.h": "c"
     }
 }
