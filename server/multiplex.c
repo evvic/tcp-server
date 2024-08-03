@@ -101,6 +101,31 @@ int get_max_fd()
     return max;
 }
 
+void get_wlan0_ipv4(char *ipv4_addr) {
+    struct ifaddrs *ifap, *ifa;
+    int family;
+
+    getifaddrs(&ifap);
+
+    for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        printf("interface: %s\n", ifa->ifa_name);
+        if (strcmp(ifa->ifa_name, "wlan0") == 0) {
+            family = ifa->ifa_addr->sa_family;
+            if (family == AF_INET) {
+                struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
+                inet_ntop(AF_INET, &sa->sin_addr, ipv4_addr, INET_ADDRSTRLEN);
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifap);
+}
+
+
 void init_tcp_server()
 {
     /* Initialize objects */
