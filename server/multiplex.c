@@ -15,7 +15,7 @@
 #include <errno.h>
 
 /* Define the port which the client has to send data to */
-#define SERVER_PORT 3001
+#define SERVER_PORT 3000
 #define CONNECTIONS_QUEUE 5
 #define MAX_SUPPORTED_CLIENTS 32
 
@@ -34,25 +34,31 @@ typedef struct result_data      // struct to store the result of adding a + b fr
 char DATA_BUFFER[1024];         // data buffer for data from client
 char ip_str[INET_ADDRSTRLEN];   // client IP address buffer (formatted string)
 
-int monitored_fd_set[MAX_SUPPORTED_CLIENTS];
+typedef struct SocketAddress {
+    int fd;
+    struct sockaddr_in client;
+} SocketAddress;
+
+SocketAddress monitored_fd_set[MAX_SUPPORTED_CLIENTS];
 
 void init_monitor_fd_set()
 {
     for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
     {
-        monitored_fd_set[i] = -1;
+        monitored_fd_set[i].fd = -1;
     }
 }
 
-void add_to_monitored_fd_set(int fd)
+void add_to_monitored_fd_set(int fd, struct sockaddr_in client)
 {
     for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
     {
-        if (monitored_fd_set[i] != -1)
+        if (monitored_fd_set[i].fd != -1)
         {
             continue;
         }
-        monitored_fd_set[i] = fd;
+        monitored_fd_set[i].fd = fd;
+        monitored_fd_set[i].client = client;
         break;
     }
 }
@@ -61,11 +67,11 @@ void remove_from_monitored_fd_set(int fd)
 {
     for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
     {
-        if (monitored_fd_set[i] != fd)
+        if (monitored_fd_set[i].fd != fd)
         {
             continue;
         }
-        monitored_fd_set[i] = -1;
+        monitored_fd_set[i].fd = -1;
         break;
     }
 }
@@ -75,9 +81,9 @@ void re_init_fds(fd_set *fdset)
     FD_ZERO(fdset);
     for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
     {
-        if (monitored_fd_set[i] != -1)
+        if (monitored_fd_set[i].fd != -1)
         {
-            FD_SET(monitored_fd_set[i], fdset);
+            FD_SET(monitored_fd_set[i].fd, fdset);
         }
     }
 }
@@ -87,12 +93,11 @@ int get_max_fd()
     int max = -1;
     for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
     {
-        if (monitored_fd_set[i] != -1)
+        if (monitored_fd_set[i].fd != -1)
         {
-            max = (monitored_fd_set[i] > max) ? monitored_fd_set[i] : max;
+            max = (monitored_fd_set[i].fd > max) ? monitored_fd_set[i].fd : max;
         }
     }
-    printf("Max FD: %d\n", max);
     return max;
 }
 
@@ -129,7 +134,7 @@ void init_tcp_server()
     /* Specify server information */
     server_addr.sin_family = AF_INET;           // this socket will only process IPv4 network packets
     server_addr.sin_port = SERVER_PORT;         // this server will process any data arriving on SERVER_PORT
-    server_addr.sin_addr.s_addr = INADDR_ANY;  // set the server IP address to any/all interfaces on the server (INADDR_ANY)
+    server_addr.sin_addr.s_addr = INADDR_ANY;   // set the server IP address to any/all interfaces on the server (INADDR_ANY)
 
     addr_len = sizeof(struct sockaddr);
 
@@ -152,16 +157,17 @@ void init_tcp_server()
         return;
     }
 
-    add_to_monitored_fd_set(master_socket_fd);  // Add master socket DF to set being monitored
+    add_to_monitored_fd_set(                    // Add master socket DF to set being monitored
+        master_socket_fd,
+        server_addr
+    );  
 
     /* Server loop for servicing clients */
 
     while(1)
     {
 
-        re_init_fds(&readfds);                     // does the same thing as the 2 below lines but for all FDs
-        // FD_ZERO(&readfds);                      // initialize the FD set to empty
-        // FD_SET(master_socket_fd, &readfds);     // adding only the master FD to the set
+        re_init_fds(&readfds);                  // clear the readfds set then re-add all the active FDs
 
         /* Wait for client connection */
 
@@ -179,11 +185,15 @@ void init_tcp_server()
 
             /* Create a temp file descriptor for the rest of the connections life */
 
+            printf("address length: %d\n", addr_len);
+
             int comm_socket_fd = accept(        // accept the connection and return the FD
                 master_socket_fd,               // master FD only used for accepting the new clients connection
                 (struct sockaddr*)&client_addr, // pass empty client_addr to be populated with IP address & port
                 &addr_len                       // const size of sockaddr
             );
+
+            printf("address length after: %d\n", addr_len);
 
             if (comm_socket_fd < 0)             // check accept didn't fail creating a FD
             {
@@ -191,21 +201,13 @@ void init_tcp_server()
                 exit(0);
             }
 
-            if (inet_ntop(                      // Convert uint32_t IP address into readable string, return NULL on error
-                    AF_INET,                    // specify IPv4 address
-                    &(client_addr.sin_addr),    // provide the clients uint32_t IP address
-                    ip_str,                     // the ip buffer to be assigned the IP string
-                    sizeof(ip_str)              // size of the buffer
-                ) == NULL)
-            {                        // NULL means it failed to convert address to string
-                perror("inet_ntop");
-                printf("Error converting network address uint to a strin\n");
-                strcpy(ip_str, "null");
-            }
+            add_to_monitored_fd_set(
+                comm_socket_fd,
+                client_addr
+            );
 
-            add_to_monitored_fd_set(comm_socket_fd);
             printf("Connection accepted from client: %s:%u\n",
-                inet_ntoa(client_addr.sin_addr),                         // print IP address with "x.x.x.x" format
+                inet_ntoa(client_addr.sin_addr),// print IP address with "x.x.x.x" format
                 ntohs(client_addr.sin_port));   // convert port into readable integer
         }
         else                                    // data arrived on a client communication socket FD
@@ -214,49 +216,61 @@ void init_tcp_server()
             for (int i = 0; i < MAX_SUPPORTED_CLIENTS; i++)
             {
                 if (FD_ISSET(                   // find which comm socket FD is active in monitored_fd_set
-                    monitored_fd_set[i],        // use the array of FD integers to check which one
+                    monitored_fd_set[i].fd,     // use the array of FD integers to check which one
                     &readfds                    // is active in readfds
                 ))
                 {
-                    comm_socket_fd = monitored_fd_set[i];
-                    memset(                         // prepare memory space for server to store data
-                        DATA_BUFFER,                // received from the client of size DATA_BUFFER
+                    comm_socket_fd = monitored_fd_set[i].fd;
+                    struct sockaddr_in curr_client = monitored_fd_set[i].client;
+
+                    memset(                     // prepare memory space for server to store data
+                        DATA_BUFFER,            // received from the client of size DATA_BUFFER
                         0,
                         sizeof(DATA_BUFFER));
 
+                    if (inet_ntop(              // Convert uint32_t IP address into readable string, return NULL on error
+                            AF_INET,            // specify IPv4 address and the clients uint32_t IP address
+                            &(curr_client.sin_addr),
+                            ip_str,             // the ip buffer to be assigned the IP string
+                            sizeof(ip_str)      // size of the buffer
+                        ) == NULL)              // NULL means it failed to convert address to string
+                    {
+                        perror("inet_ntop");
+                        printf("Error converting network address uint to a string\n");
+                        strcpy(ip_str, "null");
+                    }
+
                     /* Server receiving data from the client */
 
-                    sent_recv_bytes = recvfrom(     // a blocking system call until data arrives at comm_socket_fd
-                        comm_socket_fd,             // all communciation happens on the communication FD (not master FD)
-                        (char*)DATA_BUFFER,         // the location which the data is going to be stored
-                        sizeof(DATA_BUFFER),        // how many bytes long is this data buffer
-                        0,
-                        (struct sockaddr*)&client_addr,
-                        sizeof(struct sockaddr)
+                    sent_recv_bytes = recv(     // TCP method for retrieving data
+                        comm_socket_fd,         // all communciation happens on the communication FD (not master FD)
+                        (char*)DATA_BUFFER,     // the location which the data is going to be stored
+                        sizeof(DATA_BUFFER),    // how many bytes long is this data buffer
+                        0
                     );
 
                     printf("Server received %d bytes from client %s:%u\n",
                         sent_recv_bytes,
-                        ip_str, // uint32_t or unsigned int
-                        ntohs(client_addr.sin_port));
+                        ip_str,
+                        ntohs(curr_client.sin_port));
 
-                    if (sent_recv_bytes == 0)       // if server received 0 bytes from client
-                    {                               // server may close the connection and wait for
-                        close(comm_socket_fd);      // a new conenction
+                    if (sent_recv_bytes == 0)           // if server received 0 bytes from client
+                    {                                   // server may close the connection and wait for
+                        close(comm_socket_fd);          // a new conenction
                         remove_from_monitored_fd_set(comm_socket_fd);
                         break;
                     }
 
                     test_data *client_data = (test_data *)DATA_BUFFER;
 
-                    if (client_data->a == 0 &&      // End connection with client
-                        client_data->b == 0)        // if both a and b values are 0
+                    if (client_data->a == 0 &&          // End connection with client
+                        client_data->b == 0)            // if both a and b values are 0
                     {
                         close(comm_socket_fd);
                         remove_from_monitored_fd_set(comm_socket_fd);
                         printf("Server closed connection with client %s:%u\n",
                             ip_str,
-                            ntohs(client_addr.sin_port));
+                            ntohs(curr_client.sin_port));
 
                         break;
                     }
@@ -268,8 +282,8 @@ void init_tcp_server()
 
                     /* Server replying back to client */
 
-                    sent_recv_bytes = sendto(       // server is sending the result back to the client
-                        comm_socket_fd,             // invoked on the comm_socket_fd to reply to cleint
+                    sent_recv_bytes = sendto(           // server is sending the result back to the client
+                        comm_socket_fd,                 // invoked on the comm_socket_fd to reply to cleint
                         (char*)&result,
                         sizeof(result_data),
                         0,
