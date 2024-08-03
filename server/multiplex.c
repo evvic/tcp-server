@@ -185,15 +185,11 @@ void init_tcp_server()
 
             /* Create a temp file descriptor for the rest of the connections life */
 
-            printf("address length: %d\n", addr_len);
-
             int comm_socket_fd = accept(        // accept the connection and return the FD
                 master_socket_fd,               // master FD only used for accepting the new clients connection
                 (struct sockaddr*)&client_addr, // pass empty client_addr to be populated with IP address & port
                 &addr_len                       // const size of sockaddr
             );
-
-            printf("address length after: %d\n", addr_len);
 
             if (comm_socket_fd < 0)             // check accept didn't fail creating a FD
             {
