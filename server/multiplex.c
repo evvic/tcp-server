@@ -164,13 +164,17 @@ void init_tcp_server()
 
     /* Server loop for servicing clients */
 
+    printf("Waiting for a connection to server (%s:%u)...\n",
+        inet_ntoa(server_addr.sin_addr),
+        ntohs(server_addr.sin_port));
+
     while(1)
     {
 
         re_init_fds(&readfds);                  // clear the readfds set then re-add all the active FDs
 
         /* Wait for client connection */
-
+        
         select(                                 // process waits for any request from a FD in the readfds set
             get_max_fd() + 1,                   // provide the number for creating the next FD
             &readfds,                           // provide the set of FDs
