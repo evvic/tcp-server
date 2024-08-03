@@ -13,6 +13,8 @@
 #include <netdb.h>
 #include <memory.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
 
 /* Define the port which the client has to send data to */
 #define SERVER_PORT 3000
@@ -101,7 +103,10 @@ int get_max_fd()
     return max;
 }
 
-void get_wlan0_ipv4(char *ipv4_addr) {
+void print_available_interfaces(unsigned int port)
+{
+    printf("Server is up and available through:\n");
+
     struct ifaddrs *ifap, *ifa;
     int family;
 
@@ -111,20 +116,20 @@ void get_wlan0_ipv4(char *ipv4_addr) {
         if (ifa->ifa_addr == NULL)
             continue;
 
-        printf("interface: %s\n", ifa->ifa_name);
-        if (strcmp(ifa->ifa_name, "wlan0") == 0) {
-            family = ifa->ifa_addr->sa_family;
-            if (family == AF_INET) {
-                struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
-                inet_ntop(AF_INET, &sa->sin_addr, ipv4_addr, INET_ADDRSTRLEN);
-                break;
-            }
+        family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET)
+        {
+            struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
+            printf("%s - %s:%u\n",
+                ifa->ifa_name,
+                inet_ntoa(sa->sin_addr),
+                port);
         }
     }
 
     freeifaddrs(ifap);
-}
 
+}
 
 void init_tcp_server()
 {
@@ -185,13 +190,11 @@ void init_tcp_server()
     add_to_monitored_fd_set(                    // Add master socket DF to set being monitored
         master_socket_fd,
         server_addr
-    );  
+    );
+
+    print_available_interfaces(SERVER_PORT);
 
     /* Server loop for servicing clients */
-
-    printf("Waiting for a connection to server (%s:%u)...\n",
-        inet_ntoa(server_addr.sin_addr),
-        ntohs(server_addr.sin_port));
 
     while(1)
     {
