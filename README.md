@@ -121,8 +121,14 @@ int comm_sock_fd = accept(master_sock_tcp_fd, (struct sockaddr*)&client_addr, &a
     2. Data request from existing connected client arrives
 
 ### `recvfrom` System Call
-- Used on TCP/UDP server and client side
+- Used on UDP server and client side
 - Used by the server/client to read the data arrived on communication FDs
+- **For TCP use `recv` instead!**
+    - Does the same thing as recvfrom except it does not populate the senders address info
+    - For conenciton-oriented protocols like TCP the senders address info is not sent with the data packets!
+        - So `recvfrom` will NOT get the senders address info if it is a TCP packet
+- For TCP (connection-oriented) protocols the senders address info is sent and captured during `accept`
+    - When the connection (3-way handshake) is being established
 
 ### `sendto` System Call
 - Used on TCP/UDP server and client side
