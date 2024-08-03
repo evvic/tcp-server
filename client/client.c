@@ -103,7 +103,7 @@ void setup_tcp_connection()
         printf("%d bytes sent to the server (%s:%u).\n",
             sent_recv_bytes,
             ip_str,                     // print IP address with "x.x.x.x" format
-            ntohs(dest.sin_port));      // convert port into readable integer
+            dest.sin_port);      // convert port into readable integer
 
         sent_recv_bytes = recv(         // a blocking system call untilreceived data on the specified socket FD
             sockfd,                     // comm FD socket
@@ -115,7 +115,7 @@ void setup_tcp_connection()
         printf("%d bytes received from the server (%s:%u).\n",
             sent_recv_bytes,
             ip_str,                     // print IP address with "x.x.x.x" format
-            ntohs(dest.sin_port));      // convert port into readable integer
+            dest.sin_port);      // convert port into readable integer
 
         printf("%u + %u = %u\n", client_data.a, client_data.b, result.c);
 
