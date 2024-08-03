@@ -1,18 +1,61 @@
 # tcp-server
-TCP server and client with C
-
+**TCP multipexing server and client in `C`**
 - Create a multiplexing TCP server
     - Where multiplexing means the ability to handle `n` number of clients at the same time
 
+#### Raspberry Pi Serving 4 Clients
+![Example of Raspberry Pi running the TCP multiplexing server and serving 4 clients](assets/pi_serving_clients.png)
+
+- Running `multiplex.c` on a Raspberry Pi Zero W
+- Running 4 instances of `client.c` on a desktop
+
+```
+                     +------+      +------+
+                     |  C2  |      |  C3  |
+                     +------+      +------+
+                          \          /
+                           \        /
+                         (WiFi) (WiFi)
+                             \    / 
+                              \  /
++------+        ____         +-----+        ____        +------+
+|  C1  |----> ( WiFi )-----> |  S  | <----( WiFi ) <----|  C4  |
++------+       ```````       +-----+       ```````      +------+
+```
 Client and server based model
 - The server is any machine which receives the request, and optionally returns back the result
 - Client is any machine which initiates the request
 
+## Setup
+
+### Server (to run on Raspberry Pi)
+- Update the port defined in `multiplex.c` (the port the server will listen to)
+- scp `multiplex.c` to the Raspberry Pi
+```bash
+scp multiplex.c pi@192.168.1.225:~/.
+``` 
+- Enter the Raspberry Pi
+- Confirm the Pi is up-to-date
+```bash
+sudo apt update
+sudo apt upgrade
+sudo apt install gcc
+sudo apt install build-essential
 ```
-+-----+        ________         +-----+
-|  C  |----> ( internet )-----> |  S  |
-+-----+       ```````````       +-----+
+- Build `multiplex.c` then run the program!
+``` bash
+gcc multiplex.c -o multiplex
+./multiplex
 ```
+- Now waiting for clients to connect
+
+### Client
+- Update the server IP address and port defined in `client.c`
+- Build the `client.c` program with the makefile in the same directory (`make`)
+- Run the program with `./client`
+- Provide 2 integers for *a* and *b*
+    - The server will return the sum of *a* and *b*
+- Enter **0** for both *a* and *b* **to exit the client program**
 
 ## Socket Programming
 
@@ -173,3 +216,18 @@ sent_recv_bytes = recvfrom(
 - handles = file descriptors
 - client handles = communication file descriptors
 - M = master socket file descriptor
+
+
+# Compile for Pi
+- Install the cross-compiler toolchain for ARM architecture on your Ubuntu system
+### Init Raspberry Pi
+- Run the following commands on the Raspberry Pi to make sure it is up to date
+```bash
+sudo apt update
+sudo apt upgrade
+sudo apt install gcc
+sudo apt install build-essential
+``` 
+## Split Windows Terminal Into 4 Panes
+- `Shft` + `Alt` + `-`: split focused terminal horizontally
+- `Shft` + `Alt` + `=`: split focused terminal vertically
